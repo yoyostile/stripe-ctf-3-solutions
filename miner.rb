@@ -11,7 +11,7 @@ class Miner
     @timestamp = Time.now.to_i
     while solve
       @timestamp = Time.now.to_i
-      print '.' if @counter % 1000 == 0
+      print '.' if @counter % 10000 == 0
     end
     p "You're done!"
   end
@@ -21,8 +21,9 @@ class Miner
       p "Success! #{sha1}"
       `git hash-object -t commit --stdin -w <<< "#{body}"`
       `git reset --hard "#{sha1}"`
-      `git push -ff origin master`
-      return false
+      return false if system 'git push -ff origin master'
+      reset
+      return true
     else
       @counter += 1
       return true
@@ -67,6 +68,7 @@ class Miner
   end
 
   def reset
+    @difficulty = @parent = @tree = nil
     `git fetch origin master`
     `git reset --hard origin/master`
     prepare_index
@@ -75,7 +77,11 @@ class Miner
 
   def prepare_index
     ledger = File.open('LEDGER.txt') 
-    File.open('LEDGER.txt','a') << "#{USERNAME}: 1\n" unless ledger.read.include? USERNAME
+    unless ledger.read.include? USERNAME
+      f = File.open('LEDGER.txt','a') << "#{USERNAME}: 1\n" 
+      f.close
+    end
+    ledger.close
     `git add LEDGER.txt`
   end
 
@@ -87,7 +93,7 @@ threads << Thread.new {
   while true
     local = `git describe --always --abbrev=16`.gsub("\n","")
     remote = `git ls-remote origin 'refs/heads/master'`.gsub("\n","")
-    if remote.include? local
+    unless remote.include? local
       p 'Updated Repository, resetting!'
       threads[0].kill
       threads[0] = Thread.new { Miner.new }
