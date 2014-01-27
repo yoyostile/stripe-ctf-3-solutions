@@ -108,7 +108,7 @@ function main() {
 
   setInterval(function() {
     requestCounter = {};
-  }, 3000)
+  }, 2000)
 
   server.on('close', function () {
     for (i = 0; i < proxies.length; i++) {
